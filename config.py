@@ -3,7 +3,7 @@ import os
 
 load_dotenv()
 
-DATA_DIR = os.getenv("DATA_DIR")
+JSON_PATH_FILE=r"D://bookstoscrape1//paths.json"
 FILE_PATH=os.getenv("FILE_PATH")                             
 
 DB_CONFIG = {
@@ -16,6 +16,6 @@ DB_CONFIG = {
 
 data_tab = "books_to_scrape"
 urls_tab="books_url"
-
+prods="products"
 url="https://books.toscrape.com/"
-start_url="https://books.toscrape.com/catalogue/page-1.html"
+start_url="https://books.toscrape.com/catalogue/"

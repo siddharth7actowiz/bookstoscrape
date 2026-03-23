@@ -5,7 +5,7 @@ from config import *
 # Create a global connection pool
 connection_pool = pooling.MySQLConnectionPool(
     pool_name="mypool",
-    pool_size=5,  # adjust based on your workload
+    pool_size=15,  # adjust based on your workload
     **DB_CONFIG
 )
 
@@ -14,7 +14,7 @@ def make_connection():
     return connection_pool.get_connection()
 #table  creton query
 def create_table(cursor):
-    ddl1=f""" CREATE TABLE IF NOT EXISTS books_url(
+    ddl1=f""" CREATE TABLE IF NOT EXISTS {urls_tab}(
         id INT AUTO_INCREMENT PRIMARY KEY,
         page_no int,
         page_url text,
@@ -23,68 +23,93 @@ def create_table(cursor):
     
     cursor.execute(ddl1)
     ddl2=f"""
-    CREATE TABLE IF NOT EXISTS books_to_scrape(
+    CREATE TABLE IF NOT EXISTS {data_tab}(
         id INT AUTO_INCREMENT PRIMARY KEY,
         book_name VARCHAR(255),
         price VARCHAR(20),
         image_url TEXT,
         product_url TEXT,
-        availability VARCHAR(50)
+        availability VARCHAR(50),
+        status VARCHAR(50)
     
     );
     """
     cursor.execute(ddl2)
-# insert query
-def insert_into_db(cursor, con, data,tab):
 
+    ddl3=f'''
+        CREATE TABLE IF NOT EXISTS {prods}(
+         id INT AUTO_INCREMENT PRIMARY KEY,
+         Name TEXT,
+         Book_Id VARCHAR(100) UNIQUE,
+         Categoery VARCHAR(20),
+         Description TEXT,
+         Image_Url TEXT,
+         Price VARCHAR(10),
+         Price_Inc_Tax VARCHAR(10),
+         Tax VARCHAR(10),
+         Availability VARCHAR(100),
+         Quantity int
+        );
+    '''
+    cursor.execute(ddl3)
+# insert query
+def insert_into_db(cursor, con, data, table_name, batch_size=100):
     if not data:
-        print("No data to insert")
         return
 
     cols = list(data[0].keys())
-    col_str = ", ".join(cols)
+    col_string = ", ".join(cols)
     placeholders = ", ".join(["%s"] * len(cols))
 
-    query = f"""
-    INSERT INTO {tab} ({col_str}) 
-    VALUES ({placeholders})
-    """
+    query = f"INSERT INTO {table_name} ({col_string}) VALUES ({placeholders})"
 
-    values = [tuple(row.get(col) for col in cols) for row in data]
+    for i in range(0, len(data), batch_size):
+        batch = data[i:i + batch_size]
 
-    try:
+        values = [tuple(item[col] for col in cols) for item in batch]
+
         cursor.executemany(query, values)
         con.commit()
-        print(f"{cursor.rowcount} rows inserted")
 
-    except Exception as e:
-        con.rollback()
-        print("Insert error:", e)
-
-#fetch query
-def fetch_urls():
+        print(f"Inserted batch {i} → {i + len(batch)}")
+def fetch_urls(table_name: str, *args):
     conn = make_connection()
     cursor = conn.cursor()
 
-    cursor.execute("SELECT page_no,page_url FROM books_url WHERE status='pending';")
+    try:
+        column_string = ", ".join(args) if args else "*"
 
-    for row in cursor:
-        yield row[0],row[1]   # one URL at a time
+        query = f"SELECT {column_string} FROM {table_name} where status='pending';"
+        cursor.execute(query)
 
-    cursor.close()
-    conn.close()
+     
+        rows = cursor.fetchall()
 
-#update query
-def update_q(field):
-      conn = make_connection()
-      cursor = conn.cursor()
+        print("Rows fetched:", len(rows))
 
-      cursor.execute(
-        "UPDATE books_url SET status=%s WHERE page_no=%s",
-        ("responded", field)   
-    )
+        for row in rows:
+            yield row
 
-      conn.commit()
+    except Exception as e:
+        print("DB ERROR in fetch_urls:", e)
 
-      cursor.close()
-      conn.close()    
+    finally:
+        cursor.close()
+        conn.close()#update query
+def update_q(tab, column, value):
+    conn = make_connection()
+    cursor = conn.cursor()
+
+    try:
+        cursor.execute(
+            f"UPDATE {tab} SET status=%s WHERE {column}=%s",
+            ("responded", value)
+        )
+        conn.commit()
+
+    except Exception as e:
+        print("Update Error:", e)
+
+    finally:
+        cursor.close()
+        conn.close()
