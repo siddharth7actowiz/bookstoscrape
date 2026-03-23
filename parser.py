@@ -3,11 +3,13 @@ import requests
 from urllib.parse import urljoin
 from lxml import html
 from config import url
-from db import make_connection
-base_url=url
+from db import fetch_urls,update_q
 import gzip
 import os
 
+
+base_url=url
+#creating urls for next pages
 def cretae_pages_urls_(st_url):
    url=st_url
    url_pages=[]
@@ -33,33 +35,8 @@ def cretae_pages_urls_(st_url):
 
    return url_pages
        
-def fetch_urls():
-    conn = make_connection()
-    cursor = conn.cursor()
 
-    cursor.execute("SELECT page_no,page_url FROM books_url WHERE status='pending';")
-
-    for row in cursor:
-        yield row[0],row[1]   # one URL at a time
-
-    cursor.close()
-    conn.close()
-
-
-def update_q(field):
-      conn = make_connection()
-      cursor = conn.cursor()
-
-      cursor.execute(
-        "UPDATE books_url SET status=%s WHERE page_no=%s",
-        ("responded", field)   # ✅ EXACT match of 2 params
-    )
-
-      conn.commit()
-
-      cursor.close()
-      conn.close()    
-
+#parsing data from urls of pages
 def parser():
     
    books_data = []
@@ -69,9 +46,12 @@ def parser():
       print(f"Processing Page {page_no}: {page_url}")
       try:
          res=requests.get(page_url)
+         #saving each response 
          file_path = f"pages/page_{page_no}.html.gz"
          with gzip.open(file_path, "wt", encoding="utf-8") as f:
                 f.write(res.text)
+        
+         #parsing with lxml
          tree=html.fromstring(res.text)
 
          books = tree.xpath('//ol[@class="row"]/li')
@@ -92,9 +72,10 @@ def parser():
                      "availability": book.xpath('.//p[@class="instock availability"]/text()')[1].strip()
                   }
 
-                  # Optional validation
+                  # Data validation
                   obj = Store(**data)
                   books_data.append(obj.model_dump())
+                  #Updating url tables status from pending to responded 
                   update_q(page_no)
             except Exception as e:
                      print("Parse error:", e)

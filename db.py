@@ -9,9 +9,10 @@ connection_pool = pooling.MySQLConnectionPool(
     **DB_CONFIG
 )
 
+# DB Connetion
 def make_connection():
     return connection_pool.get_connection()
-
+#table  creton query
 def create_table(cursor):
     ddl1=f""" CREATE TABLE IF NOT EXISTS books_url(
         id INT AUTO_INCREMENT PRIMARY KEY,
@@ -33,7 +34,7 @@ def create_table(cursor):
     );
     """
     cursor.execute(ddl2)
-
+# insert query
 def insert_into_db(cursor, con, data,tab):
 
     if not data:
@@ -59,3 +60,31 @@ def insert_into_db(cursor, con, data,tab):
     except Exception as e:
         con.rollback()
         print("Insert error:", e)
+
+#fetch query
+def fetch_urls():
+    conn = make_connection()
+    cursor = conn.cursor()
+
+    cursor.execute("SELECT page_no,page_url FROM books_url WHERE status='pending';")
+
+    for row in cursor:
+        yield row[0],row[1]   # one URL at a time
+
+    cursor.close()
+    conn.close()
+
+#update query
+def update_q(field):
+      conn = make_connection()
+      cursor = conn.cursor()
+
+      cursor.execute(
+        "UPDATE books_url SET status=%s WHERE page_no=%s",
+        ("responded", field)   
+    )
+
+      conn.commit()
+
+      cursor.close()
+      conn.close()    
