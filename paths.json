@@ -1,10 +1,10 @@
 {
-  "next_page":"string(//li[@class=next']/a/@href)",
+  "next_page":"//li[@class='next']/a/@href",
   "books":"//ol[@class='row']/li",
   "book_name":".//h3/a/@title",
   "price":".//p[@class='price_color']/text()",
   "image_url":".//img/@src",
   "product_url":".//h3/a/@href",
-  "availability":".//p[@class='instock availability']/text()"
+  "availability":"//p[@class='instock availability']/text()[normalize-space()]"
 
 }
