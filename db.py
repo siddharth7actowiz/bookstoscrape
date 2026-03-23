@@ -40,9 +40,10 @@ def create_table(cursor):
         CREATE TABLE IF NOT EXISTS {prods}(
          id INT AUTO_INCREMENT PRIMARY KEY,
          Name TEXT,
-         Book_Id VARCHAR(100) UNIQUE,
+         Book_Id VARCHAR(100) ,
          Categoery VARCHAR(20),
          Description TEXT,
+         Product_Url TEXT,
          Image_Url TEXT,
          Price VARCHAR(10),
          Price_Inc_Tax VARCHAR(10),
@@ -72,6 +73,8 @@ def insert_into_db(cursor, con, data, table_name, batch_size=100):
         con.commit()
 
         print(f"Inserted batch {i} → {i + len(batch)}")
+
+#fetch query        
 def fetch_urls(table_name: str, *args):
     conn = make_connection()
     cursor = conn.cursor()
@@ -99,13 +102,13 @@ def fetch_urls(table_name: str, *args):
 def update_q(tab, column, value):
     conn = make_connection()
     cursor = conn.cursor()
-
     try:
         cursor.execute(
-            f"UPDATE {tab} SET status=%s WHERE {column}=%s",
+            f"UPDATE {tab} SET status = %s WHERE {column} = %s",
             ("responded", value)
         )
         conn.commit()
+
 
     except Exception as e:
         print("Update Error:", e)
